@@ -15,6 +15,7 @@ TODO
     12/1/2019 - jtatman - Complete script
 Updates
     12/1/2019 - jtatman - Initial script write
+    12/2/2019 - jtatman - Change output to be a hashtable
 
 .PARAMETER DecryptionKey
 The key used to decrypt the Keepass database
@@ -166,6 +167,7 @@ function Exit-ScriptWithSuccess {
 
 function Write-ObjectOutput {
 
+    #$IDTable = @{}
     if ($Plaintext) {
         return $Identities 
     }
@@ -178,10 +180,12 @@ function Write-ObjectOutput {
             $mycreds = New-Object System.Management.Automation.PSCredential ($username, $secpasswd)
             $SecCred | Add-member "Credential" $mycreds
             return $SecCred
+            #$IDTable.$($_.title) = $mycreds
         }
         return $IDs
+        
     }
-
+    #return $IDTable
 }
 
 function Set-Cleanup {
