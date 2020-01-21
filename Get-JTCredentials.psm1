@@ -175,7 +175,7 @@ function Write-ObjectOutput {
 
     #$IDTable = @{}
     if ($Plaintext) {
-        return $Identities 
+
     }
     elseif ($Hashtable) {
         $ht = @{}
@@ -185,7 +185,7 @@ function Write-ObjectOutput {
             $mycreds = New-Object System.Management.Automation.PSCredential ($username, $secpasswd)  
             $ht[$_.title] = $mycreds         
         }
-        return $ht
+        $Identities = $ht
     }
     else {
         $IDs = $Identities | ForEach-Object {
@@ -198,10 +198,12 @@ function Write-ObjectOutput {
             return $SecCred
             #$IDTable.$($_.title) = $mycreds
         }
-        return $IDs
+        $identities = $IDs
         
     }
+
     #return $IDTable
+    $Identities
 }
 
 function Set-Cleanup {
