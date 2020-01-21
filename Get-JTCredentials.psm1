@@ -80,7 +80,13 @@ param (
         Mandatory=$false, 
         ValueFromPipeline=$true,
         ValueFromPipelineByPropertyName=$true)
-    ][Switch]$Plaintext
+    ][Switch]$Plaintext,
+    [Parameter(
+        Position=5, 
+        Mandatory=$false, 
+        ValueFromPipeline=$true,
+        ValueFromPipelineByPropertyName=$true)
+    ][Switch]$Hashtable
 )
 
 ##################################################################################################
@@ -171,6 +177,16 @@ function Write-ObjectOutput {
     if ($Plaintext) {
         return $Identities 
     }
+    elseif ($Hashtable) {
+        $ht = @{}
+        $Identities | ForEach-Object {
+            $username = $_.username
+            $secpasswd = ConvertTo-SecureString $_.password -AsPlainText -Force
+            $mycreds = New-Object System.Management.Automation.PSCredential ($username, $secpasswd)  
+            $ht[$_.title] = $mycreds         
+        }
+        return $ht
+    }
     else {
         $IDs = $Identities | ForEach-Object {
             $SecCred = new-object PSObject
@@ -258,8 +274,7 @@ Function Get-KeepassIdentities {
         $PasswordCT = Read-Host -Prompt "Enter Keepass Database Passphrase" -AsSecureString
         $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($PasswordCT)
         $Password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-    }
-    else {
+    } else {
         $Password = $DecryptionKey
     }
 
