@@ -193,46 +193,49 @@ function Do-Main {
 ##########
 #RDG File Defaults
 ##########
-$RDPConfig = @"
+# authentication level:i:2 (to support azuread joined)
+# enablecredsspsupport:i:0
 
-smart sizing:i:1
-session bpp:i:32
-winposstr:s:0,1,-7,1,1769,1040
-compression:i:1
-keyboardhook:i:2
-audiocapturemode:i:0
-videoplaybackmode:i:1
-connection type:i:7
-networkautodetect:i:1
-bandwidthautodetect:i:1
-displayconnectionbar:i:1
-enableworkspacereconnect:i:0
-disable wallpaper:i:0
-allow font smoothing:i:0
+$RDPConfig = @"
 allow desktop composition:i:0
+allow font smoothing:i:0
+alternate shell:s:powershell
+audiocapturemode:i:0
+authentication level:i:2
+autoreconnection enabled:i:1
+bandwidthautodetect:i:1
+bitmapcachepersistenable:i:1
+compression:i:1
+connection type:i:7
+disable cursor setting:i:0
 disable full window drag:i:1
 disable menu anims:i:1
 disable themes:i:0
-disable cursor setting:i:0
-bitmapcachepersistenable:i:1
-full address:s:
-redirectprinters:i:0
-redirectcomports:i:0
-redirectsmartcards:i:0
-redirectclipboard:i:1
-redirectposdevices:i:0
-autoreconnection enabled:i:1
-authentication level:i:2
-prompt for credentials:i:0
-negotiate security layer:i:1
-remoteapplicationmode:i:0
-alternate shell:s:powershell
-shell working directory:s:
-gatewaybrokeringtype:i:0
-use redirection server name:i:0
-rdgiskdcproxy:i:0
-kdcproxyname:s:
+disable wallpaper:i:0
+displayconnectionbar:i:1
 drivestoredirect:s:C:\;
+enableworkspacereconnect:i:0
+full address:s:
+gatewaybrokeringtype:i:0
+kdcproxyname:s:
+keyboardhook:i:2
+negotiate security layer:i:1
+networkautodetect:i:1
+prompt for credentials:i:0
+rdgiskdcproxy:i:0
+redirectclipboard:i:1
+redirectcomports:i:0
+redirectposdevices:i:0
+redirectprinters:i:0
+redirectsmartcards:i:0
+remoteapplicationmode:i:0
+session bpp:i:32
+shell working directory:s:
+smart sizing:i:1
+use redirection server name:i:0
+videoplaybackmode:i:1
+winposstr:s:0,1,-7,1,1769,1040
+
 "@
 
 ##########
