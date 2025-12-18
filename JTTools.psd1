@@ -81,7 +81,8 @@ NestedModules = 'Write-JTLog.psm1', `
                 'Install-PowershellModules.psm1', `
 				'Connect-RDP.psm1', `
                 'Get-JTCredentials.psm1', `
-                'Get-JTEnvironment.psm1'
+                'Get-JTEnvironment.psm1', `
+                'Connect-JTAsset.psm1'
 
 # Functions to export from this module
 FunctionsToExport = '*'

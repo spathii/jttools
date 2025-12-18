@@ -190,13 +190,20 @@ function Do-Main {
 
 }
 
-##########
-#RDG File Defaults
-##########
-# authentication level:i:2 (to support azuread joined)
-# enablecredsspsupport:i:0
 
-$RDPConfig = @"
+
+
+##########
+#Script Functions
+##########
+
+function Get-RDPConfig {
+    ##########
+    #RDG File Defaults
+    ##########
+    # authentication level:i:2 (to support azuread joined)
+    # enablecredsspsupport:i:0
+    $RDPConfig = @"
 allow desktop composition:i:0
 allow font smoothing:i:0
 alternate shell:s:powershell
@@ -213,7 +220,7 @@ disable menu anims:i:1
 disable themes:i:0
 disable wallpaper:i:0
 displayconnectionbar:i:1
-drivestoredirect:s:C:\;
+drivestoredirect:s:C:\
 enableworkspacereconnect:i:0
 full address:s:
 gatewaybrokeringtype:i:0
@@ -235,14 +242,8 @@ smart sizing:i:1
 use redirection server name:i:0
 videoplaybackmode:i:1
 winposstr:s:0,1,-7,1,1769,1040
-
 "@
 
-##########
-#Script Functions
-##########
-
-function Get-RDPConfig {
     #Check for what computer to connect to
     $RDPConfig += "`nalternate full address:s:$Computer"
 
