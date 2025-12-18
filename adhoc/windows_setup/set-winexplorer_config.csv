@@ -45,4 +45,4 @@ custom,quickaccess_recent,on,on|off
 custom,quickaccess_frequent,on,on|off
 custom,launch_to,home,thispc|home|quickaccess
 custom,classic_menu_bar,off,on|off
-customcustom,separate_explorer_process,off,on|off
+customcustom,separate_explorer_process,on,on|off
