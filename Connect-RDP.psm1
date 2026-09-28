@@ -85,6 +85,7 @@ param (
 #Configurable Script Variables
 ##################################################################################################
 $rdgServer = "rdg.corp.shutterfly.com"
+$rdpSigningThumbprint = "3DB1E6E31CFDA29478984F06CB17158290AF3C9C"
 
 #!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#
 #Hard Coded Values
@@ -220,7 +221,7 @@ disable menu anims:i:1
 disable themes:i:0
 disable wallpaper:i:0
 displayconnectionbar:i:1
-drivestoredirect:s:C:\
+drivestoredirect:s:C:
 enableworkspacereconnect:i:0
 full address:s:
 gatewaybrokeringtype:i:0
@@ -232,6 +233,7 @@ prompt for credentials:i:0
 rdgiskdcproxy:i:0
 redirectclipboard:i:1
 redirectcomports:i:0
+redirectdrives:i:1
 redirectposdevices:i:0
 redirectprinters:i:0
 redirectsmartcards:i:0
@@ -245,6 +247,8 @@ winposstr:s:0,1,-7,1,1769,1040
 "@
 
     #Check for what computer to connect to
+    #rdpsign refuses to sign the file (error 0x80070490) unless "full address" is populated, so mirror it alongside alternate full address
+    $RDPConfig = $RDPConfig -replace "(?m)^full address:s:\r?$", "full address:s:$Computer"
     $RDPConfig += "`nalternate full address:s:$Computer"
 
     #Check for which user (use local user if none specified)
@@ -306,9 +310,15 @@ winposstr:s:0,1,-7,1,1769,1040
     
 
     $RDPConfigFile = $env:USERPROFILE + "\default.rdp"
-    
+
     $RDPConfig | Out-file -Encoding ASCII $RDPConfigFile
-    
+
+    #Sign the file so mstsc trusts it as a known publisher and skips the resource-redirection prompt
+    rdpsign /sha256 $rdpSigningThumbprint $RDPConfigFile | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Failed to sign $RDPConfigFile (rdpsign exit code $LASTEXITCODE); mstsc will prompt for resource access"
+    }
+
     return $RDPConfigFile
 }
 
