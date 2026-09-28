@@ -20,12 +20,20 @@ The user to connect as
 .PARAMETER computer
 The computer to connect to
 .PARAMETER rdp
-Whether to use the RDG server 
+Whether to use the RDG server
+.PARAMETER addconfigsigning
+Creates a local self-signed cert (if one doesn't already exist), trusts it, and registers it
+as a trusted .rdp publisher so generated .rdp files can be signed. Run this once per machine;
+$computer is not required when using this switch on its own.
 
 
 .EXAMPLE
 Connect-RDP wintools
 Will use all the defaults, and connect to wintools
+
+.EXAMPLE
+Connect-RDP -addconfigsigning
+One-time setup: creates and trusts the local RDP signing certificate
 
 Connect-RDP -computer wintools -user jason.tatman
 Will connect, but use the jason.tatman (admin) account
@@ -49,8 +57,8 @@ Will connect with all monitors
 [CmdletBinding()]
 param (
     [Parameter(
-        Position=0, 
-        Mandatory=$true, 
+        Position=0,
+        Mandatory=$false,
         ValueFromPipeline=$true,
         ValueFromPipelineByPropertyName=$true)
     ][String]$computer,
@@ -76,16 +84,21 @@ param (
         Mandatory=$false)
     ][switch]$nordgmatchcredentials,
     [Parameter(
-        Position=5, 
+        Position=5,
         Mandatory=$false)
-    ][switch]$audio
+    ][switch]$audio,
+    [Parameter(
+        Position=6,
+        Mandatory=$false)
+    ][switch]$addconfigsigning
 )
 
 ##################################################################################################
 #Configurable Script Variables
 ##################################################################################################
 $rdgServer = "rdg.corp.shutterfly.com"
-$rdpSigningThumbprint = "3DB1E6E31CFDA29478984F06CB17158290AF3C9C"
+$rdpSigningCertSubject = "CN=Connect-RDP Signing"
+$rdpTrustedPublisherRegPath = "HKCU:\Software\Policies\Microsoft\Windows NT\Terminal Services"
 
 #!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#
 #Hard Coded Values
@@ -180,6 +193,20 @@ function Set-Cleanup {
 ##########
 function Do-Main {
 
+    #One-time (per machine) setup of the RDP signing certificate
+    if ($addconfigsigning) {
+        Set-RDPSigningConfig
+
+        if (-not $computer) {
+            Exit-ScriptWithSuccess
+            return
+        }
+    }
+    elseif (-not $computer) {
+        Exit-ScriptWithError -ExecutionError "The computer parameter is required unless -addconfigsigning is used on its own"
+        return
+    }
+
     #Build the config file based on user input
     $RDPConfigFile = Get-RDPConfig
 
@@ -197,6 +224,38 @@ function Do-Main {
 ##########
 #Script Functions
 ##########
+
+function Get-RDPSigningThumbprint {
+    #Look up a valid (non-expired, private-key-backed) RDP signing cert by subject rather than a hardcoded thumbprint,
+    #so a renewed/recreated cert is picked up automatically
+    $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object {
+        $_.Subject -eq $rdpSigningCertSubject -and $_.NotAfter -gt (Get-Date) -and $_.HasPrivateKey
+    } | Sort-Object NotAfter -Descending | Select-Object -First 1
+
+    return $cert.Thumbprint
+}
+
+function Set-RDPSigningConfig {
+    $existingThumbprint = Get-RDPSigningThumbprint
+    if ($existingThumbprint) {
+        Write-Output "RDP signing is already configured (thumbprint $existingThumbprint)"
+        return
+    }
+
+    $cert = New-SelfSignedCertificate -Subject $rdpSigningCertSubject -Type CodeSigningCert `
+        -CertStoreLocation Cert:\CurrentUser\My -KeyExportPolicy Exportable -KeyUsage DigitalSignature `
+        -NotAfter (Get-Date).AddYears(5)
+
+    $cerPath = [System.IO.Path]::GetTempFileName() + ".cer"
+    Export-Certificate -Cert $cert -FilePath $cerPath | Out-Null
+    Import-Certificate -FilePath $cerPath -CertStoreLocation Cert:\CurrentUser\Root | Out-Null
+    Remove-Item $cerPath -ErrorAction SilentlyContinue
+
+    New-Item -Path $rdpTrustedPublisherRegPath -Force | Out-Null
+    New-ItemProperty -Path $rdpTrustedPublisherRegPath -Name "TrustedCertThumbprints" -Value $cert.Thumbprint -PropertyType String -Force | Out-Null
+
+    Write-Output "Created and trusted RDP signing certificate (thumbprint $($cert.Thumbprint))"
+}
 
 function Get-RDPConfig {
     ##########
@@ -314,9 +373,15 @@ winposstr:s:0,1,-7,1,1769,1040
     $RDPConfig | Out-file -Encoding ASCII $RDPConfigFile
 
     #Sign the file so mstsc trusts it as a known publisher and skips the resource-redirection prompt
-    rdpsign /sha256 $rdpSigningThumbprint $RDPConfigFile | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        Write-Warning "Failed to sign $RDPConfigFile (rdpsign exit code $LASTEXITCODE); mstsc will prompt for resource access"
+    $rdpSigningThumbprint = Get-RDPSigningThumbprint
+    if ($rdpSigningThumbprint) {
+        rdpsign /sha256 $rdpSigningThumbprint $RDPConfigFile | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Failed to sign $RDPConfigFile (rdpsign exit code $LASTEXITCODE); mstsc will prompt for resource access"
+        }
+    }
+    else {
+        Write-Warning "No RDP signing certificate found; run 'Connect-RDP -addconfigsigning' once to set one up. mstsc will prompt for resource access."
     }
 
     return $RDPConfigFile
