@@ -25,6 +25,8 @@ Whether to use the RDG server
 Creates a local self-signed cert (if one doesn't already exist), trusts it, and registers it
 as a trusted .rdp publisher so generated .rdp files can be signed. Run this once per machine;
 $computer is not required when using this switch on its own.
+.PARAMETER hybriddesktop
+Adds enablecredsspsupport:i:0 to the generated .rdp file and omits the default username line (an explicit -user is still written)
 
 
 .EXAMPLE
@@ -52,6 +54,9 @@ Will connect with full screen
 
 Connect-RDP -computer wintools -size all
 Will connect with all monitors
+
+Connect-RDP -computer wintools -hybriddesktop
+Will connect, and add enablecredsspsupport:i:0 to the rdp config
 #>
 
 [CmdletBinding()]
@@ -90,7 +95,11 @@ param (
     [Parameter(
         Position=6,
         Mandatory=$false)
-    ][switch]$addconfigsigning
+    ][switch]$addconfigsigning,
+    [Parameter(
+        Position=7,
+        Mandatory=$false)
+    ][switch]$hybriddesktop
 )
 
 ##################################################################################################
@@ -310,14 +319,13 @@ winposstr:s:0,1,-7,1,1769,1040
     $RDPConfig = $RDPConfig -replace "(?m)^full address:s:\r?$", "full address:s:$Computer"
     $RDPConfig += "`nalternate full address:s:$Computer"
 
-    #Check for which user (use local user if none specified)
+    #Check for which user (use local user if none specified, or no username at all with -hybriddesktop)
     if ($user) {
-        $username = $user
+        $RDPConfig += "`nusername:s:$user"
     }
-    else {
-        $username = $env:username + "@" + $env:USERDNSDOMAIN
+    elseif (-not $hybriddesktop) {
+        $RDPConfig += "`nusername:s:" + $env:username + "@" + $env:USERDNSDOMAIN
     }
-    $RDPConfig += "`nusername:s:$username"
 
     #Check for the size
     Switch ($size) {
@@ -366,7 +374,11 @@ winposstr:s:0,1,-7,1,1769,1040
     else {
         $RDPConfig += "`naudiomode:i:2"
     }
-    
+
+    #Check to see if the CredSSP support setting should be added
+    if ($hybriddesktop) {
+        $RDPConfig += "`nenablecredsspsupport:i:0"
+    }
 
     $RDPConfigFile = $env:USERPROFILE + "\default.rdp"
 
